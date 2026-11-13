@@ -33,7 +33,7 @@
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   .bar { height:28px; background:var(--navy); border-radius:6px; }
   .bar.b2 { background:var(--mid); }
-  .barrow { display:grid; grid-template-columns:150px 1fr 60px; gap:10px; align-items:center; margin:6px 0; }
+  .barrow { display:grid; grid-template-columns:minmax(90px,170px) minmax(90px,1fr) 70px; gap:10px; align-items:center; margin:6px 0; }
   .tabs { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
   .tabs button { font-size:15px; padding:8px 12px; }
   .tabs button.on { background:var(--mid); }
@@ -311,15 +311,15 @@ function beamerExp() {
   const g = k => ans.filter(a => a.g === k);
   const P = g("past"), F = g("future");
   let h = `<h1>Ein kurzes Experiment</h1><p style="font-size:20px">${ans.length} Antworten (${P.length} Rückblick, ${F.length} Vorausblick)</p>
-    <div class="row" style="max-width:700px">${e.phase === "open" ? "" : `<button onclick="R('exp').update({phase:'open'})">Experiment auf die Handys</button>`}
+    <div class="row" style="max-width:700px">${e.phase === "open" || e.phase === "show" ? "" : `<button onclick="R('exp').update({phase:'open'})">Experiment auf die Handys</button>`}
     ${e.phase === "open" ? `<button onclick="R('exp').update({phase:'show'})">Ergebnis zeigen</button>` : ""}
     ${e.phase === "show" ? `<button class="sec" onclick="R('exp').update({phase:'closed'})">Handys zurück zur Auktion</button>` : ""}</div>`;
   if (e.phase !== "show") return h + `<p class="muted">Die Handys werden abwechselnd in zwei Gruppen geteilt: Die eine schätzt die Veränderung der letzten zehn Jahre, die andere die der nächsten zehn Jahre.</p>`;
   const avg = (arr, k) => arr.length ? arr.reduce((s, a) => s + a[k], 0) / arr.length : 0;
   const med = arr => { if (!arr.length) return 0; const s = arr.map(a => a.band).sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
   const facet = (k, label) => { const p = avg(P, k), f = avg(F, k); return `<h2>${label}</h2>
-    <div class="barrow"><span>letzte 10 Jahre</span><div class="bar" style="width:${p * 10}%"></div><b>${p.toFixed(1)}</b></div>
-    <div class="barrow"><span>nächste 10 Jahre</span><div class="bar b2" style="width:${f * 10}%"></div><b>${f.toFixed(1)}</b></div>`; };
+    <div class="barrow"><span>letzte 10 Jahre</span><div class="bar" style="width:${p * 10}%"></div><b>${p.toLocaleString("de-AT",{minimumFractionDigits:1,maximumFractionDigits:1})}</b></div>
+    <div class="barrow"><span>nächste 10 Jahre</span><div class="bar b2" style="width:${f * 10}%"></div><b>${f.toLocaleString("de-AT",{minimumFractionDigits:1,maximumFractionDigits:1})}</b></div>`; };
   const mp = med(P), mf = med(F), mx = Math.max(mp, mf, 1);
   h += `<div class="grid2"><div class="card">${facet("pers", "Persönlichkeit")}${facet("werte", "Werte")}${facet("vorl", "Vorlieben")}</div>
     <div class="card"><h2>Konzertticket (Median)</h2>
