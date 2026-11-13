@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Social and Professional Skills · 14.11.2026</title>
+<style>
+  :root { --navy:#132D62; --ink:#1F2A44; --blue:#DDEBF7; --pale:#EEF2F7; --line:#C9D6E8; --mid:#5B7DB8; --ok:#2E7D4F; --warn:#B3261E; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Tw Cen MT","Segoe UI",Helvetica,Arial,sans-serif; color:var(--ink); background:#fff; }
+  header { background:var(--navy); color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
+  header b { font-size:17px; } header span { font-size:13px; opacity:.8; }
+  main { padding:16px; max-width:1200px; margin:0 auto; }
+  h1 { color:var(--navy); font-size:26px; margin:6px 0 12px; }
+  h2 { color:var(--navy); font-size:19px; margin:18px 0 8px; }
+  .card { background:var(--blue); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin:10px 0; }
+  .pale { background:var(--pale); }
+  button { font:inherit; font-size:17px; border:0; border-radius:10px; padding:12px 16px; background:var(--navy); color:#fff; cursor:pointer; }
+  button.sec { background:#fff; color:var(--navy); border:1px solid var(--navy); }
+  button:disabled { opacity:.35; cursor:default; }
+  input, select { font:inherit; font-size:18px; padding:10px; border:1px solid var(--line); border-radius:10px; width:100%; background:#fff; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .row > * { flex:1; }
+  .muted { color:#6B7A99; font-size:14px; }
+  .big { font-size:44px; font-weight:700; color:var(--navy); }
+  .huge { font-size:84px; font-weight:700; color:var(--navy); line-height:1; }
+  .msg { padding:10px 12px; border-radius:10px; margin-top:8px; font-size:16px; }
+  .msg.err { background:#FDECEA; color:var(--warn); } .msg.ok { background:#E7F4EC; color:var(--ok); }
+  table { border-collapse:collapse; width:100%; font-size:15px; }
+  th, td { border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  th { background:var(--blue); color:var(--navy); }
+  tr:nth-child(even) td { background:var(--pale); }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .bar { height:28px; background:var(--navy); border-radius:6px; }
+  .bar.b2 { background:var(--mid); }
+  .barrow { display:grid; grid-template-columns:150px 1fr 60px; gap:10px; align-items:center; margin:6px 0; }
+  .tabs { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .tabs button { font-size:15px; padding:8px 12px; }
+  .tabs button.on { background:var(--mid); }
+  .hide { display:none !important; }
+  .slider { width:100%; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { background:#fff; border:1px solid var(--line); border-radius:20px; padding:4px 10px; font-size:14px; }
+  .chip.sold { background:var(--navy); color:#fff; border-color:var(--navy); }
+  .chip.now { background:var(--mid); color:#fff; border-color:var(--mid); }
+  .call { font-size:34px; font-weight:700; color:var(--warn); min-height:44px; }
+</style>
+</head>
+<body>
+<header><b>Social and Professional Skills</b><span id="hdr">14.11.2026</span></header>
+<main id="app"><p class="muted">Lädt …</p></main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ===== Konfiguration ===== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBMAl4Sc2BXq7hkdJhjsibBJlO5JJmbj6Y",
+  authDomain: "sps-141126.firebaseapp.com",
+  databaseURL: "https://sps-141126-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "sps-141126",
+  appId: "1:1004394081356:web:14f0d60046c928ff0358e9"
+};
+const ROOT = "sps141126";
+const START = 1000;
+const VALUES = ["Familie","Gesundheit","Freiheit und Selbstbestimmung","Sicherheit","Erfolg und Anerkennung","Einfluss und Macht",
+  "Wohlstand","Abenteuer und Abwechslung","Kreativität","Freundschaft","Sinn und Beitrag zur Gesellschaft","Wissen und Weisheit",
+  "Genuss","Natur und Nachhaltigkeit","Tradition","Gerechtigkeit","Liebe und Partnerschaft","Zeit für mich"];
+const COLORS = ["Rot","Gelb","Grün","Blau"];
+
+/* ===== Hilfen ===== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const eur = n => n.toLocaleString("de-AT");
+function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+const R = p => db.ref(ROOT + "/" + p);
+
+let S = { auction:{}, players:{}, bids:{}, results:{}, exp:{}, answers:{} };
+const listen = (p, key) => R(p).on("value", snap => { S[key] = snap.val() || {}; render(); });
+listen("auction", "auction"); listen("players", "players"); listen("bids", "bids");
+listen("results", "results"); listen("exp", "exp"); listen("answers", "answers");
+db.ref(".info/connected").on("value", s => { $("#hdr").textContent = s.val() ? "verbunden" : "keine Verbindung …"; });
+
+const VIEW = (location.hash || "").replace("#", "") || "handy";
+window.addEventListener("hashchange", () => location.reload());
+
+/* ===== Budget-Berechnung ===== */
+function spent(card) { let s = 0; Object.values(S.results).forEach(r => { if (r && r.card === card) s += r.amount; }); return s; }
+function budget(card) { return START - spent(card); }
+function maxBids() {
+  // { card: { itemIdx: maxAmount } }
+  const m = {};
+  Object.entries(S.bids).forEach(([i, list]) => Object.values(list || {}).forEach(b => {
+    m[b.card] = m[b.card] || {}; m[b.card][i] = Math.max(m[b.card][i] || 0, b.amount);
+  }));
+  return m;
+}
+
+/* ===== Aktionen Auktion ===== */
+async function placeBid(card, amount) {
+  const a = S.auction;
+  if (a.phase !== "bidding") return "Gerade läuft keine Versteigerung.";
+  if (!Number.isFinite(amount) || amount <= 0 || amount % 50 !== 0) return "Bitte in 50er-Schritten bieten.";
+  if (amount > budget(card)) return "So viel Geld hast du nicht mehr.";
+  const item = a.item;
+  const res = await R("auction").transaction(cur => {
+    if (!cur || cur.phase !== "bidding" || cur.item !== item) return; // abbrechen
+    const high = (cur.high && cur.high.amount) || 0;
+    if (amount <= high) return;
+    cur.high = { amount, card, t: Date.now() };
+    cur.call = 0;
+    return cur;
+  });
+  if (!res.committed) return "Jemand hat schon mehr geboten.";
+  R("bids/" + item).push({ card, amount, t: Date.now() });
+  return null;
+}
+
+/* ===== HANDY ===== */
+let myCard = ls("sps_card");
+let hMsg = "";
+let customBid = "";
+function handyView() {
+  const a = S.auction, e = S.exp;
+  // Experiment hat Vorrang, wenn geöffnet
+  if (e.phase === "open" || e.phase === "show") return handyExp();
+  if (!myCard || !S.players[myCard]) return handyJoin();
+  const b = budget(myCard);
+  let h = `<div class="muted">Du bist <b>${esc(myCard)}</b></div>
+    <div class="card"><div class="muted">Dein Budget</div><div class="big">${eur(b)} Taler</div></div>`;
+  if (a.phase === "bidding") {
+    const high = (a.high && a.high.amount) || 0;
+    const mine = a.high && a.high.card === myCard;
+    const min = high + 50;
+    h += `<div class="card pale"><div class="muted">Jetzt versteigert</div><div class="big" style="font-size:32px">${esc(VALUES[a.item])}</div>
+      <p>Höchstgebot: <b>${high ? eur(high) + " Taler" : "noch keins"}</b> ${mine ? "– <b>das bist du</b>" : ""}</p>
+      <div class="row">
+        <button onclick="bid(${min})" ${min > b || mine ? "disabled" : ""}>${eur(min)}</button>
+        <button onclick="bid(${high + 100})" ${high + 100 > b || mine ? "disabled" : ""}>${eur(high + 100)}</button>
+        <button onclick="bid(${high + 200})" ${high + 200 > b || mine ? "disabled" : ""}>${eur(high + 200)}</button>
+      </div>
+      <div class="row" style="margin-top:10px"><input id="cb" type="number" inputmode="numeric" step="50" placeholder="eigener Betrag" value="${esc(customBid)}" oninput="customBid=this.value">
+        <button onclick="bid(parseInt($('#cb').value,10))" ${mine ? "disabled" : ""}>Bieten</button></div>
+      ${hMsg ? `<div class="msg ${hMsg.startsWith("✓") ? "ok" : "err"}">${esc(hMsg)}</div>` : ""}</div>`;
+  } else if (a.phase === "sold") {
+    const r = S.results[a.item];
+    h += `<div class="card pale"><div class="muted">Zuschlag</div><div class="big" style="font-size:30px">${esc(VALUES[a.item])}</div>
+      <p>${r ? (r.card === myCard ? "<b>Gehört dir</b> – für " + eur(r.amount) + " Taler." : "an " + esc(r.card) + " für " + eur(r.amount) + " Taler") : "nicht verkauft"}</p></div>`;
+  } else if (a.phase === "end") {
+    h += myEval(myCard);
+  } else {
+    h += `<div class="card pale">Gleich geht es los. Warte auf den ersten Wert.</div>`;
+  }
+  const won = Object.entries(S.results).filter(([i, r]) => r && r.card === myCard);
+  if (won.length && a.phase !== "end") h += `<h2>Deine Werte</h2><div class="chips">${won.map(([i, r]) => `<span class="chip sold">${esc(VALUES[i])} · ${eur(r.amount)}</span>`).join("")}</div>`;
+  return h;
+}
+function myEval(card) {
+  const mb = maxBids()[card] || {};
+  const rows = VALUES.map((v, i) => ({ v, max: mb[i] || 0, won: S.results[i] && S.results[i].card === card ? S.results[i].amount : null }))
+    .sort((x, y) => y.max - x.max);
+  return `<div class="card"><b>Deine Auswertung</b><p class="muted">Wie hoch du bei welchem Wert gegangen bist</p>
+    <table><tr><th>Wert</th><th>dein höchstes Gebot</th><th>ersteigert</th></tr>
+    ${rows.map(r => `<tr><td>${esc(r.v)}</td><td>${r.max ? eur(r.max) : "–"}</td><td>${r.won !== null ? "✓ " + eur(r.won) : ""}</td></tr>`).join("")}</table>
+    <p>Nicht ausgegeben: <b>${eur(budget(card))} Taler</b></p></div>`;
+}
+async function bid(n) { hMsg = ""; const err = await placeBid(myCard, n); hMsg = err || "✓ Gebot " + eur(n) + " Taler abgegeben"; customBid = ""; render(); }
+function handyJoin() {
+  return `<h1>Werteauktion</h1><div class="card">
+    <p>Welche Uno-Karte hast du gezogen? Weil jedes Paar dieselbe Karte hat, einigt euch: eine Person ist A, die andere B.</p>
+    <div class="row"><select id="jc">${COLORS.map(c => `<option>${c}</option>`).join("")}</select>
+    <select id="jn">${[0,1,2,3,4,5,6,7,8,9].map(n => `<option>${n}</option>`).join("")}</select>
+    <select id="jp"><option>A</option><option>B</option></select></div>
+    <p><button onclick="join()">Mitmachen</button></p>
+    ${hMsg ? `<div class="msg err">${esc(hMsg)}</div>` : ""}</div>
+    <p class="muted">Es wird kein Name gespeichert, nur die Karte.</p>`;
+}
+async function join() {
+  const id = $("#jc").value + " " + $("#jn").value + " " + $("#jp").value;
+  const res = await R("players/" + id).transaction(cur => cur ? undefined : { card:id, t:Date.now() });
+  if (!res.committed && ls("sps_card") !== id) { hMsg = id + " ist schon vergeben. Habt ihr A und B vertauscht?"; render(); return; }
+  myCard = id; ls("sps_card", id); hMsg = ""; render();
+}
+
+/* ===== Experiment (Handy) ===== */
+let myGroup = null, grouping = false, expDone = false, lastRound = null;
+function syncRound() {
+  const rk = String(S.exp.round || 0);
+  if (rk !== lastRound) { lastRound = rk; myGroup = ls("sps_group_" + rk); expDone = ls("sps_exp_done_" + rk) === "1"; }
+  return rk;
+}
+async function ensureGroup() {
+  if (myGroup || grouping) return; grouping = true;
+  const r = await R("expCount").transaction(c => (c || 0) + 1);
+  myGroup = (r.snapshot.val() % 2) ? "past" : "future"; ls("sps_group_" + syncRound(), myGroup); grouping = false; render();
+}
+let ex = { pers:5, werte:5, vorl:5, band:"" };
+function handyExp() {
+  syncRound();
+  if (S.exp.phase === "show" || expDone) return `<h1>Danke!</h1><div class="card pale">Deine Antwort ist angekommen. Das Ergebnis siehst du gleich am Beamer.</div>`;
+  if (!myGroup) { ensureGroup(); return `<p class="muted">Einen Moment …</p>`; }
+  const past = myGroup === "past";
+  const q = past ? "Wie sehr haben Sie sich in den <b>letzten zehn Jahren</b> verändert?" : "Wie sehr werden Sie sich in den <b>nächsten zehn Jahren</b> verändern?";
+  const sl = (k, label) => `<p><b>${label}</b> <span id="v_${k}">${ex[k]}</span><br>
+    <input class="slider" type="range" min="0" max="10" step="1" value="${ex[k]}" oninput="ex.${k}=+this.value;$('#v_${k}').textContent=this.value"></p>
+    <div class="row muted"><span>0 gar nicht</span><span style="text-align:right">10 sehr stark</span></div>`;
+  const band = past
+    ? "Denken Sie an Ihre Lieblingsband oder Lieblingsmusik von <b>vor zehn Jahren</b>. Wie viel würden Sie <b>heute</b> zahlen, um sie live zu sehen?"
+    : "Denken Sie an Ihre <b>heutige</b> Lieblingsband oder Lieblingsmusik. Wie viel würden Sie <b>in zehn Jahren</b> zahlen, um sie live zu sehen?";
+  return `<h1>Ein kurzes Experiment</h1>
+    <div class="card"><p>${q}</p>${sl("pers","Persönlichkeit")}${sl("werte","Werte")}${sl("vorl","Vorlieben")}</div>
+    <div class="card pale"><p>${band}</p><input id="band" type="number" inputmode="numeric" placeholder="Betrag in Euro" value="${esc(ex.band)}" oninput="ex.band=this.value"></div>
+    <p><button onclick="sendExp()">Abschicken</button></p>${hMsg ? `<div class="msg err">${esc(hMsg)}</div>` : ""}
+    <p class="muted">Anonym. Antworten Sie still und für sich.</p>`;
+}
+async function sendExp() {
+  const band = parseInt(ex.band, 10);
+  if (!Number.isFinite(band) || band < 0) { hMsg = "Bitte einen Betrag in Euro eingeben (0 ist auch möglich)."; render(); return; }
+  await R("answers").push({ g:myGroup, pers:ex.pers, werte:ex.werte, vorl:ex.vorl, band:Math.min(band, 100000), t:Date.now() });
+  expDone = true; ls("sps_exp_done_" + syncRound(), "1"); hMsg = ""; render();
+}
+
+/* ===== BEAMER ===== */
+let tab = ls("sps_tab") || "auktion";
+let armed = "";
+function beamerView() {
+  const t = b => `<button class="${tab === b[0] ? "on" : ""}" onclick="tab='${b[0]}';ls('sps_tab','${b[0]}');render()">${b[1]}</button>`;
+  let h = `<div class="tabs">${[["auktion","Auktion"],["einzeln","Einzelauswertung"],["experiment","Experiment"],["setup","Einrichten"]].map(t).join("")}</div>`;
+  if (tab === "auktion") h += beamerAuction();
+  if (tab === "einzeln") h += beamerSingle();
+  if (tab === "experiment") h += beamerExp();
+  if (tab === "setup") h += beamerSetup();
+  return h;
+}
+function beamerAuction() {
+  const a = S.auction, n = Object.keys(S.players).length;
+  const chips = VALUES.map((v, i) => `<span class="chip ${S.results[i] ? "sold" : ""} ${a.item === i && a.phase !== "end" ? "now" : ""}" onclick="openItem(${i})" style="cursor:pointer">${esc(v)}${S.results[i] ? " · " + eur(S.results[i].amount) : ""}</span>`).join("");
+  let main = "";
+  if (a.phase === "bidding" || a.phase === "sold") {
+    const high = a.high || null;
+    const calls = ["", "Zum Ersten …", "Zum Zweiten …", "Zum Dritten …"];
+    main = `<div class="card" style="text-align:center"><div class="muted">Wert</div><div class="huge" style="font-size:60px">${esc(VALUES[a.item])}</div>
+      <p style="font-size:22px;margin:16px 0 4px">Höchstgebot</p><div class="huge">${high ? eur(high.amount) : "–"}</div>
+      <p style="font-size:22px">${high ? esc(high.card) : "&nbsp;"}</p>
+      <div class="call">${a.phase === "sold" ? (S.results[a.item] ? "Zuschlag!" : "Nicht verkauft") : calls[a.call || 0]}</div></div>
+      <div class="row">${a.phase === "bidding" ? `<button onclick="callNext()">${a.call >= 3 ? "" : calls[(a.call || 0) + 1] || ""}</button>
+        <button onclick="sell()" ${high ? "" : "disabled"}>Zuschlag</button><button class="sec" onclick="noSale()">Ohne Zuschlag</button>` : `<button onclick="nextItem()">Nächster Wert</button>`}
+        <button class="sec" onclick="endAuction()">Auktion beenden</button></div>`;
+  } else if (a.phase === "end") {
+    main = beamerRanking();
+  } else {
+    main = `<div class="card" style="text-align:center"><p style="font-size:22px">${n} Personen sind dabei</p>
+      <button onclick="nextItem()">Ersten Wert aufrufen</button></div>`;
+  }
+  return main + `<h2>Werte</h2><div class="chips">${chips}</div>
+    <p class="muted">Ein Klick auf einen Wert ruft genau diesen auf (nur für noch nicht verkaufte).</p>${notbetrieb()}`;
+}
+function notbetrieb() {
+  if (S.auction.phase !== "bidding") return "";
+  const cards = Object.keys(S.players).sort();
+  return `<details style="margin-top:14px"><summary class="muted">Notbetrieb: Gebot von Hand eintragen</summary>
+    <div class="row" style="margin-top:8px"><select id="nb_c">${cards.map(c => `<option>${esc(c)}</option>`).join("")}</select>
+    <input id="nb_a" type="number" step="50" placeholder="Betrag"><button onclick="handBid()">Eintragen</button></div>
+    <div id="nb_m" class="muted"></div></details>`;
+}
+async function handBid() { const err = await placeBid($("#nb_c").value, parseInt($("#nb_a").value, 10)); $("#nb_m").textContent = err || "eingetragen"; }
+function remaining() { return VALUES.map((v, i) => i).filter(i => !S.results[i] && !(S.auction.skipped || {})[i]); }
+function openItem(i) { if (S.results[i]) return; R("auction").set({ phase:"bidding", item:i, high:null, call:0, skipped:S.auction.skipped || null }); }
+function nextItem() { const r = remaining(); if (!r.length) return endAuction(); const i = r[Math.floor(Math.random() * r.length)]; openItem(i); }
+function callNext() { R("auction/call").transaction(c => Math.min((c || 0) + 1, 3)); }
+async function sell() {
+  const a = S.auction; if (!a.high) return;
+  const ok = await R("auction").transaction(cur => { if (!cur || cur.phase !== "bidding") return; cur.phase = "sold"; return cur; });
+  if (ok.committed) { const h = ok.snapshot.val().high; R("results/" + a.item).set({ card:h.card, amount:h.amount }); }
+}
+function noSale() { const sk = Object.assign({}, S.auction.skipped || {}); sk[S.auction.item] = true; R("auction").update({ phase:"sold", skipped:sk }); }
+function endAuction() { R("auction").update({ phase:"end" }); }
+function beamerRanking() {
+  const sold = Object.entries(S.results).filter(([i, r]) => r).sort((x, y) => y[1].amount - x[1].amount);
+  const max = sold.length ? sold[0][1].amount : 1;
+  return `<h1>Was unserer Gruppe am meisten wert war</h1>${sold.map(([i, r]) =>
+    `<div class="barrow"><span>${esc(VALUES[i])}</span><div class="bar" style="width:${Math.max(4, r.amount / max * 100)}%"></div><b>${eur(r.amount)}</b></div>`).join("")}
+    <p class="muted">Nicht verkauft: ${VALUES.filter((v, i) => !S.results[i]).map(esc).join(", ") || "–"}</p>`;
+}
+function beamerSingle() {
+  const mb = maxBids(); const cards = Object.keys(S.players).sort();
+  if (!cards.length) return `<p class="muted">Noch niemand angemeldet.</p>`;
+  const rows = cards.map(c => {
+    const m = mb[c] || {};
+    const top = Object.entries(m).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([i, a]) => `${esc(VALUES[i])} (${eur(a)})`).join(", ");
+    const won = Object.entries(S.results).filter(([i, r]) => r && r.card === c).map(([i, r]) => `${esc(VALUES[i])} (${eur(r.amount)})`).join(", ");
+    return `<tr><td><b>${esc(c)}</b></td><td>${top || "–"}</td><td>${won || "–"}</td><td>${eur(budget(c))}</td></tr>`;
+  }).join("");
+  const full = `<table style="font-size:12px;margin-top:8px"><tr><th>Karte</th>${VALUES.map(v => `<th>${esc(v)}</th>`).join("")}</tr>
+    ${cards.map(c => `<tr><td><b>${esc(c)}</b></td>${VALUES.map((v, i) => { const x = (mb[c] || {})[i]; const w = S.results[i] && S.results[i].card === c; return `<td>${x ? (w ? "<b>" + eur(x) + "</b>" : eur(x)) : ""}</td>`; }).join("")}</tr>`).join("")}</table>`;
+  return `<h1>Einzelauswertung</h1><p class="muted">Jede Person sieht ihre eigene Auswertung nach Auktionsende auch am Handy.</p>
+    <table><tr><th>Karte</th><th>höchste Gebote</th><th>ersteigert</th><th>Rest</th></tr>${rows}</table>
+    <h2>Alle Gebote im Detail</h2><p class="muted">Höchstes Gebot pro Person und Wert, fett = ersteigert</p><div style="overflow-x:auto">${full}</div>
+    <p><button class="sec" onclick="copyCsv()">Als Tabelle kopieren</button> <span id="cpm" class="muted"></span></p>`;
+}
+function copyCsv() {
+  const mb = maxBids(); const cards = Object.keys(S.players).sort();
+  const lines = [["Karte", ...VALUES, "Rest"].join("\t")].concat(cards.map(c => [c, ...VALUES.map((v, i) => (mb[c] || {})[i] || ""), budget(c)].join("\t")));
+  navigator.clipboard.writeText(lines.join("\n")).then(() => $("#cpm").textContent = "kopiert – in Excel einfügen", () => $("#cpm").textContent = "Kopieren nicht möglich");
+}
+function beamerExp() {
+  const e = S.exp, ans = Object.values(S.answers);
+  const g = k => ans.filter(a => a.g === k);
+  const P = g("past"), F = g("future");
+  let h = `<h1>Ein kurzes Experiment</h1><p style="font-size:20px">${ans.length} Antworten (${P.length} Rückblick, ${F.length} Vorausblick)</p>
+    <div class="row" style="max-width:700px">${e.phase === "open" ? "" : `<button onclick="R('exp').update({phase:'open'})">Experiment auf die Handys</button>`}
+    ${e.phase === "open" ? `<button onclick="R('exp').update({phase:'show'})">Ergebnis zeigen</button>` : ""}
+    ${e.phase === "show" ? `<button class="sec" onclick="R('exp').update({phase:'closed'})">Handys zurück zur Auktion</button>` : ""}</div>`;
+  if (e.phase !== "show") return h + `<p class="muted">Die Handys werden abwechselnd in zwei Gruppen geteilt: Die eine schätzt die Veränderung der letzten zehn Jahre, die andere die der nächsten zehn Jahre.</p>`;
+  const avg = (arr, k) => arr.length ? arr.reduce((s, a) => s + a[k], 0) / arr.length : 0;
+  const med = arr => { if (!arr.length) return 0; const s = arr.map(a => a.band).sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const facet = (k, label) => { const p = avg(P, k), f = avg(F, k); return `<h2>${label}</h2>
+    <div class="barrow"><span>letzte 10 Jahre</span><div class="bar" style="width:${p * 10}%"></div><b>${p.toFixed(1)}</b></div>
+    <div class="barrow"><span>nächste 10 Jahre</span><div class="bar b2" style="width:${f * 10}%"></div><b>${f.toFixed(1)}</b></div>`; };
+  const mp = med(P), mf = med(F), mx = Math.max(mp, mf, 1);
+  h += `<div class="grid2"><div class="card">${facet("pers", "Persönlichkeit")}${facet("werte", "Werte")}${facet("vorl", "Vorlieben")}</div>
+    <div class="card"><h2>Konzertticket (Median)</h2>
+    <div class="barrow"><span>Band von damals, heute</span><div class="bar" style="width:${mp / mx * 100}%"></div><b>${eur(mp)} €</b></div>
+    <div class="barrow"><span>Band von heute, in 10 Jahren</span><div class="bar b2" style="width:${mf / mx * 100}%"></div><b>${eur(mf)} €</b></div>
+    <p class="muted" style="margin-top:20px">Original (Quoidbach, Gilbert &amp; Wilson, 2013): 80 $ für die Band von damals, 129 $ für die Band von heute in zehn Jahren.</p></div></div>`;
+  return h;
+}
+function beamerSetup() {
+  const url = location.href.split("#")[0];
+  return `<h1>Einrichten</h1>
+    <div class="card"><p>Adresse für die Handys:</p><p class="big" style="font-size:28px;word-break:break-all">${esc(url)}</p>
+    <p class="muted">QR-Code: siehe Folie bzw. Ausdruck.</p></div>
+    <div class="card pale"><p><b>Zurücksetzen</b> (z. B. nach dem Test am Vorabend). Zweimal klicken.</p>
+    <div class="row"><button class="sec" onclick="reset('auction')">${armed === "auction" ? "Wirklich? Nochmal klicken" : "Auktion zurücksetzen"}</button>
+    <button class="sec" onclick="reset('exp')">${armed === "exp" ? "Wirklich? Nochmal klicken" : "Experiment zurücksetzen"}</button></div></div>`;
+}
+function reset(k) {
+  if (armed !== k) { armed = k; render(); return; }
+  armed = "";
+  if (k === "auction") { R("auction").set({ phase:"lobby" }); R("players").remove(); R("bids").remove(); R("results").remove(); }
+  if (k === "exp") { R("exp").set({ phase:"closed", round:Date.now() }); R("answers").remove(); R("expCount").remove(); }
+}
+
+/* ===== Render ===== */
+function render() {
+  const focus = document.activeElement && document.activeElement.id;
+  if (focus === "cb" || focus === "band" || focus === "nb_a") return; // nicht beim Tippen neu zeichnen
+  $("#app").innerHTML = VIEW === "beamer" ? beamerView() : handyView();
+}
+render();
+</script>
+</body>
+</html>
