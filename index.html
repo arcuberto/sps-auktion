@@ -133,7 +133,7 @@ async function placeBid(card, amount) {
 
 /* ===== HANDY ===== */
 let myCard = ls("sps_card");
-let hMsg = "";
+let hMsg = "", expMsg = "", lastKind = "";
 let customBid = "";
 function handyView() {
   const a = S.auction, e = S.exp;
@@ -225,14 +225,14 @@ function handyExp() {
   return `<h1>Ein kurzes Experiment</h1>
     <div class="card"><p>${q}</p>${sl("pers","Persönlichkeit")}${sl("werte","Werte")}${sl("vorl","Vorlieben")}</div>
     <div class="card pale"><p>${band}</p><input id="band" type="number" inputmode="numeric" placeholder="Betrag in Euro" value="${esc(ex.band)}" oninput="ex.band=this.value"></div>
-    <p><button onclick="sendExp()">Abschicken</button></p>${hMsg ? `<div class="msg err">${esc(hMsg)}</div>` : ""}
+    <p><button onclick="sendExp()">Abschicken</button></p>${expMsg ? `<div class="msg err">${esc(expMsg)}</div>` : ""}
     <p class="muted">Anonym. Antworten Sie still und für sich.</p>`;
 }
 async function sendExp() {
   const band = parseInt(ex.band, 10);
-  if (!Number.isFinite(band) || band < 0) { hMsg = "Bitte einen Betrag in Euro eingeben (0 ist auch möglich)."; render(); return; }
+  if (!Number.isFinite(band) || band < 0) { expMsg = "Bitte einen Betrag in Euro eingeben (0 ist auch möglich)."; render(); return; }
   await R("answers").push({ g:myGroup, pers:ex.pers, werte:ex.werte, vorl:ex.vorl, band:Math.min(band, 100000), t:Date.now() });
-  expDone = true; ls("sps_exp_done_" + syncRound(), "1"); hMsg = ""; render();
+  expDone = true; ls("sps_exp_done_" + syncRound(), "1"); expMsg = ""; render();
 }
 
 /* ===== BEAMER ===== */
@@ -358,8 +358,11 @@ function reset(k) {
 
 /* ===== Render ===== */
 function render() {
+  const kind = VIEW === "beamer" ? "beamer" : ((S.exp.phase === "open" || S.exp.phase === "show") ? "exp" : "auction");
   const focus = document.activeElement && document.activeElement.id;
-  if (focus === "cb" || focus === "band" || focus === "nb_a") return; // nicht beim Tippen neu zeichnen
+  if (kind === lastKind && (focus === "cb" || focus === "band" || focus === "nb_a")) return; // nicht beim Tippen neu zeichnen
+  if (kind !== lastKind) { hMsg = ""; expMsg = ""; customBid = ""; if (document.activeElement) document.activeElement.blur(); }
+  lastKind = kind;
   $("#app").innerHTML = VIEW === "beamer" ? beamerView() : handyView();
 }
 render();
